@@ -1,0 +1,20 @@
+generating_entities_module.my_config_entity.*:
+  type: config_entity
+  label: 'My config entity config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    uuid:
+      type: string
+    configuration_title:
+      type: string
+      label: 'Configuration title'
+      translatable: true
+    description:
+      type: string
+      label: 'Description'
+      translatable: true
