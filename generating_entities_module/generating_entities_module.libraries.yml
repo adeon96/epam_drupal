@@ -1,0 +1,5 @@
+articles_colors:
+  js:
+    js/articles_colors.js: {}
+  dependencies:
+    - core/jquery
