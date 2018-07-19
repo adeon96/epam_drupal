@@ -272,23 +272,23 @@ class MyContentEntity extends RevisionableContentEntityBase implements MyContent
       ->setTranslatable(TRUE);
 	  
 	//Custom property definition
-	$fields['prop_def'] = BaseFieldDefinition::create('entity_reference')
-	  ->setLabel(t('Custom property definition'))
-	  ->setDescription(t('Field for mapping node to article'))
-	  ->setRevisionable(TRUE)
+    $fields['prop_def'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Custom property definition'))
+      ->setDescription(t('Field for mapping node to article'))
+      ->setRevisionable(TRUE)
       ->setSetting('target_type', 'node')
       ->setSetting('handler', 'default')
       ->setTranslatable(TRUE)
 	  
-	  //Formatter
-	  ->setDisplayOptions('view', [
+      //Formatter
+      ->setDisplayOptions('view', [
         'label' => 'hidden',
         'type' => 'node',
         'weight' => 0,
       ])
 	  
 	  //Widget
-	  ->setDisplayOptions('form', [
+      ->setDisplayOptions('form', [
         'type' => 'entity_reference_autocomplete',
         'weight' => 5,
         'settings' => [
@@ -299,7 +299,7 @@ class MyContentEntity extends RevisionableContentEntityBase implements MyContent
         ],
       ])
 	  
-	  ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
     return $fields;
