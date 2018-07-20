@@ -22,8 +22,6 @@ class MySndCustomBlock extends BlockBase implements BlockPluginInterface, Contai
 	  
   protected $entityTypeManager;
   
-  protected $articles;
-  
   /**
    * {@inheritdoc}
    */
@@ -46,28 +44,34 @@ class MySndCustomBlock extends BlockBase implements BlockPluginInterface, Contai
   public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entityTypeManager) {
     $this->entityTypeManager = $entityTypeManager;
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-	
-    $this->getArticlesInfo();
-  }
-  
-  public function getArticlesInfo() {
-    $entities = $this->entityTypeManager->getStorage('node')->loadByProperties(['type' => 'article']);
-	
-    foreach($entities as $art) {
-      if($art->field_color->value == "") $art->field_color->value = "gray";
-    }
-	
-    $this->articles = $entities;
   }
 
   /**
    * {@inheritdoc}
    */
   public function build() {
+    //associative array
+    //key - entity's title
+    //value - color of the referenced article
+    $entityData = array();
+    
+    $storage = $this->entityTypeManager->getStorage('my_content_entity');
+    $contEnt = $storage->loadMultiple();
+    
+    foreach($contEnt as $ent) {
+      $title = $ent->getName();
+      $artId = $ent->prop_def->getString();
+      
+      $article = $this->entityTypeManager->getStorage('node')->load($artId);
+      $artColor = $article->field_color->value;
+      
+      $entityData[$title] = $artColor;
+    }
+    
     $build = [];
 
     $build['my_snd_custom_block']['#theme'] = 'my_template';
-    $build['my_snd_custom_block']['#articles'] = $this->articles;
+    $build['my_snd_custom_block']['#articles'] = $entityData;
     $build['my_snd_custom_block']['#attached'] = array(
       'library' => array(
         'generating_entities_module/articles_colors',

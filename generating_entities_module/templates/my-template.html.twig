@@ -1,5 +1,5 @@
 <div class="articles">
-  {% for art_item in articles %}
-    <p class="{{ art_item.field_color.value }}">{{ art_item.title.value }} </p>
+  {% for title, color in articles %}
+    <p class="{{ color }}">{{ title }} </p>
   {% endfor %}
 </div>
