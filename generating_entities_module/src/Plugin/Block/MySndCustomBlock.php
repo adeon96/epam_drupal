@@ -50,25 +50,24 @@ class MySndCustomBlock extends BlockBase implements BlockPluginInterface, Contai
    * {@inheritdoc}
    */
   public function build() {
-    //associative array
-    //key - entity's title
-    //value - color of the referenced article
-    $entityData = array();
-    
     $storage = $this->entityTypeManager->getStorage('my_content_entity');
     $contEnt = $storage->loadMultiple();
     
+    if(count($contEnt) == 0) {
+      return [];
+    }
+    
+    //associative array
+    //key - entity's title
+    //value - color of the referenced article
+    $entityData = [];
+    
     foreach($contEnt as $ent) {
       $title = $ent->getName();
-      $artId = $ent->prop_def->getString();
-      
-      $article = $this->entityTypeManager->getStorage('node')->load($artId);
-      $artColor = $article->field_color->value;
+      $artColor = $ent->prop_def->referencedEntities()[0]->field_color->value;
       
       $entityData[$title] = $artColor;
     }
-    
-    $build = [];
 
     $build['my_snd_custom_block']['#theme'] = 'my_template';
     $build['my_snd_custom_block']['#articles'] = $entityData;
