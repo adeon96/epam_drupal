@@ -8,10 +8,8 @@ use Drupal\rest\ResourceResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
-use Drupal\Core\Language\LanguageManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
+
+use Drupal\generating_entities_module\Services\EntitiesService;
 
 
 /**
@@ -34,13 +32,8 @@ class GetResource extends ResourceBase {
    */
   protected $currentUser;
   
-  protected $entityTypeManager;
+  protected $entitiesService;
   
-  protected $entityQuery;
-  
-  protected $languageManager;
-  
-  protected $currentRequest;
   
   /**
    * Constructs a Drupal\rest\Plugin\ResourceBase object.
@@ -65,17 +58,11 @@ class GetResource extends ResourceBase {
     array $serializer_formats,
     LoggerInterface $logger,
     AccountProxyInterface $current_user,
-    EntityTypeManagerInterface $entityTypeManager,
-    QueryFactory $queryFact,
-    LanguageManagerInterface $langManagInterf,
-    Request $request) {
+    EntitiesService $entServ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $serializer_formats, $logger);
     
     $this->currentUser = $current_user;
-    $this->entityTypeManager = $entityTypeManager;
-    $this->entityQuery = $queryFact;
-    $this->languageManager = $langManagInterf;
-    $this->currentRequest = $request;
+    $this->entitiesService = $entServ;
     
   }
   
@@ -90,10 +77,7 @@ class GetResource extends ResourceBase {
       $container->getParameter('serializer.formats'),
       $container->get('logger.factory')->get('example_rest'),
       $container->get('current_user'),
-      $container->get('entity_type.manager'),
-      $container->get('entity.query'),
-      $container->get('language_manager'),
-      $container->get('request_stack')->getCurrentRequest()
+      $container->get('generating_entities_module.entities_service')
     );
   }
   
@@ -108,7 +92,8 @@ class GetResource extends ResourceBase {
       throw new AccessDeniedHttpException();
     }
     
-    $articles = $this->getArticles();
+    $service = $this->entitiesService;
+    $articles = $service->getEntities("2018-10-05"); 
     
     if($articles == []) {
       $response = ['message' => 'No one article found for your query criteria'];
@@ -123,85 +108,6 @@ class GetResource extends ResourceBase {
     $response = new ResourceResponse($articles);
     return $response;
     
-  }
-  
-  private function validateRequestDate($reqDate) {
-    $regExp = "/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/";
-    
-    if(!(preg_match($regExp, $reqDate))) {
-      return false;
-    }
-    
-    return true;
-  }
-  
-  //filtering entities with necessary conditions
-  private function getEntityIds() {
-    $curr_lang = $this->languageManager->getCurrentLanguage()->getId();
-    
-    //if GET parameter with date is set
-    if(NULL !== $this->currentRequest->query->get('date')) {
-      $req_date = $this->currentRequest->query->get('date');
-      
-      //passed date is invalid
-      if($this->validateRequestDate($req_date) === false) {
-        return -2;
-      }
-      
-      $intReqDate = strtotime($req_date);
-      
-      $query = $this->entityQuery->get('my_content_entity')
-        ->condition('langcode', $curr_lang, '=')
-        ->condition('field_date_my.start_date', $intReqDate, '<=')
-        ->condition('field_date_my.end_date', $intReqDate, '>=');
-        
-      return $query->execute();
-    }
-    
-    //if GET parameter with date is not set
-    $query = $this->entityQuery->get('my_content_entity')
-      ->condition('langcode', $curr_lang, '=');
-     
-    return $query->execute();
-  }
-  
-  private function getArticles() {
-    $entity_ids = $this->getEntityIds();
-    
-    if($entity_ids == -2) {
-      return -2;
-    }
-    
-    //If there is no one entity matching query
-    if(count($entity_ids) == 0) {
-      return [];
-    }
-    
-    $storage = $this->entityTypeManager->getStorage('my_content_entity');
-    $contEnt = $storage->loadMultiple($entity_ids);
-    
-    
-    $articles = [];
-    
-    foreach($contEnt as $ent) {
-      //referenced entities details
-      $artInfo = [];
-      
-      //title of custom entity
-      $artInfo["title"] = $ent->getName();
-      
-      $refEnt = $ent->prop_def->referencedEntities();
-      
-      if(count($refEnt) != 0) {
-        $artInfo["refer_ent_id"] = $refEnt[0]->id();
-        $artInfo["refer_ent_title"] = $refEnt[0]->title->value;;
-        $artInfo["refer_ent_body"] = $refEnt[0]->body->value;
-      }
-      
-      $articles[$ent->id()] = $artInfo;
-    }
-    
-    return $articles;
   }
 
 }

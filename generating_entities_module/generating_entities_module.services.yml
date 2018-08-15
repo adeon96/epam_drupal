@@ -1,0 +1,4 @@
+services:
+  generating_entities_module.entities_service:
+    class: Drupal\generating_entities_module\Services\EntitiesService
+    arguments: ['@language_manager', '@entity_type.manager', '@entity.query']
