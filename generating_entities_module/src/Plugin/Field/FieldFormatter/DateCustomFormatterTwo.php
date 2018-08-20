@@ -39,7 +39,7 @@ class DateCustomFormatterTwo extends FormatterBase {
       '#type' => 'select',
       '#options' => [
         'Y-m-d' => $this->t('year-month-day'),
-        'm/d/Y' => $this->t('month-day-year'),
+        'm/d/Y' => $this->t('month/day/year'),
       ],
       '#default_value' => $this->getSetting('date_format'),
     ];

@@ -62,7 +62,7 @@ class DateCustomFieldTypeTwo extends FieldItemBase {
   public function isEmpty() {
     $start_date = $this->get('start_date')->getValue();
     $end_date = $this->get('end_date')->getValue();
-    return ($start_date === NULL || $start_date === '' || $end_date === NULL || $end_date === '');
+    return (empty($start_date) || empty($end_date));
   }
   
   /**

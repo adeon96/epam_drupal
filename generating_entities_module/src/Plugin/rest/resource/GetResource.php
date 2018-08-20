@@ -93,20 +93,10 @@ class GetResource extends ResourceBase {
     }
     
     $service = $this->entitiesService;
-    $articles = $service->getEntities("2018-10-05"); 
+    $articles = $service->getEntities("2018-09-10"); 
     
-    if($articles == []) {
-      $response = ['message' => 'No one article found for your query criteria'];
-      return new ResourceResponse($response);
-    }
-    
-    if($articles == -2) {
-      $response = ['message' => 'Invalid date format. Y-m-d is expected'];
-      return new ResourceResponse($response);
-    }
-    
-    $response = new ResourceResponse($articles);
-    return $response;
+    $response = $articles;
+    return new ResourceResponse($response);
     
   }
 

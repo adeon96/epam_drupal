@@ -10,8 +10,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Provides a Post Resource
@@ -30,6 +30,7 @@ class PostResource extends ResourceBase {
   protected $currentUser;
   
   protected $entityTypeManager;
+  
   
   /**
    * Constructs a Drupal\rest\Plugin\ResourceBase object.
@@ -81,60 +82,53 @@ class PostResource extends ResourceBase {
    * Creates a new custom entity.
    *
    */
-  private function createEntity() {   
-    $inputJSON = file_get_contents('php://input');
-    $input = json_decode($inputJSON, TRUE);
+  private function createEntity($data) {    
+    $dateStart = $data['field_date_my']['start_date'];
+    $dateEnd = $data['field_date_my']['end_date'];
     
-    $dateStart = $input['field_date_my']['start_date'];
-    $dateEnd = $input['field_date_my']['end_date'];
-    
-    if($this->validateDateFormat($dateStart, $dateEnd) === true) {
-      $input['field_date_my']['start_date'] = strtotime($dateStart);
-      $input['field_date_my']['end_date'] = strtotime($dateEnd);
+    if($this->validateDateFormat($dateStart, $dateEnd) !== false) {
+      
+      if($this->validateDatesOrder($dateStart, $dateEnd) !== false) {
+        $data['field_date_my']['start_date'] = strtotime($dateStart);
+        $data['field_date_my']['end_date'] = strtotime($dateEnd);
+      }
+      else {
+        throw new HttpException(500, 'Your end date goes before start date.');
+      }
     }
     else {
-      return -2;
+      throw new HttpException(500, 'Invalid date format passed. Y-m-d is expected.');
     }
   
-    $entity = $this->entityTypeManager->getStorage('my_content_entity')->create($input);
-    
-    try {
-      $entity->save();
-    } catch (Exception $e) {
-      throw new BadRequestHttpException("Problem with creating a new entity: " . $e->getMessage());
-    }
+    $entity = $this->entityTypeManager->getStorage('my_content_entity')->create($data);
+    $entity->save();
     
     return $entity;
   }
   
-  //ensures that date input corresponds to date format(Y-m-d)
-  private function validateDateFormat($start, $end) {
-    $regExp = "/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/";
-    
-    if(!(preg_match($regExp, $start))) {
-      return false;
-    }
-    
-    if(!(preg_match($regExp, $end))) {
-      return false;
-    }
-    
-    return true;
-  }
-  
-  public function post() {
+  public function post($data) {
     if (!$this->currentUser->hasPermission('access content')) {
       throw new AccessDeniedHttpException();
     }
     
-    $createdEntity = $this->createEntity();
+    $createdEntity = $this->createEntity($data);
     
-    if($createdEntity == -2) {
-      return new ResourceResponse(t('Invalid date format passed in the request'), 500);
-    }
+    $response = $createdEntity;
     
-    return new ResourceResponse($createdEntity);
+    return new ResourceResponse($response);
     
+  }
+  
+  //ensures that date input corresponds to date format(Y-m-d)
+  private function validateDateFormat($start, $end) {
+    return (strtotime($start) && strtotime($end));
+  }
+  
+  private function validateDatesOrder($start, $end) {
+    $startDate = strtotime($start);
+    $endDate = strtotime($end);
+    
+    return ($startDate <= $endDate);
   }
   
 }
