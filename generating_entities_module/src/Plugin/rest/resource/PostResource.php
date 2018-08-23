@@ -111,9 +111,7 @@ class PostResource extends ResourceBase {
       throw new AccessDeniedHttpException();
     }
     
-    $createdEntity = $this->createEntity($data);
-    
-    $response = $createdEntity;
+    $response = $this->createEntity($data);
     
     return new ResourceResponse($response);
     
