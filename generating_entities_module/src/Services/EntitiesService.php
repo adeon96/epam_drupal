@@ -6,6 +6,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Drupal\Core\Cache\CacheBackendInterface;
 
 class EntitiesService {
   
@@ -15,17 +16,21 @@ class EntitiesService {
   
   protected $entityQuery;
   
+  protected $cache;
+  
   /**
    * Constructs a new EntitiesService object.
    */
   public function __construct(
     LanguageManagerInterface $langManagInterf,
     EntityTypeManagerInterface $entityTypeManager, 
-    QueryFactory $queryFact) {
+    QueryFactory $queryFact,
+    CacheBackendInterface $iCache) {
       
     $this->languageManager = $langManagInterf;
     $this->entityTypeManager = $entityTypeManager;
     $this->entityQuery = $queryFact;
+    $this->cache = $iCache;
   }
   
   /**
@@ -34,7 +39,7 @@ class EntitiesService {
    * @param string $date
    *   Date that should be in the range of dates of entity.
    */
-  public function getEntities($date = "2018-08-14") {
+  public function getEntities($date = "2018-09-10") {
     
     $entity_ids = $this->getEntityIds($date);
     
@@ -49,31 +54,60 @@ class EntitiesService {
     
     $articles = [];
     
+    
     foreach($contEnt as $ent) {
-      //referenced entities details
-      $artInfo = [];
       
-      //title of custom entity
-      $artInfo["title"] = $ent->getName();
+      //id of custom entity
+      $mainId = $ent->id();
       
-      $refEnt = $ent->prop_def->referencedEntities();
+      //Looking for the cached custom entity
+      //with id $mainId
+      $main_cid = 'entity:' . $mainId;
+      $cachedEntity = $this->cache->get($main_cid);
+      $artInfo = $cachedEntity ? $cachedEntity->data : null;
       
-      if(count($refEnt) != 0) {
-
-        foreach($refEnt as $refEntItem) {
-          $id = $refEntItem->id();
-          
-          $artInfo["refer_ent_id" . $id] = $id;
-          $artInfo["refer_ent_title" . $id] = $refEntItem->title->value;;
-          $artInfo["refer_ent_body" . $id] = $refEntItem->body->value;
+      if(!$artInfo) {
+        
+        //custom entity: title and referenced entities details
+        $artInfo = [];
+        
+        //title of custom entity
+        $artInfo["title"] = $ent->getName();
+        
+        //Looking for the cached list of referenced entities
+        //for the entity with id $mainId
+        $referenced_cid = 'referenced_entities:' . $mainId;
+        $cachedReferencedEntities = $this->cache->get($referenced_cid);
+        $refEnt = $cachedReferencedEntities ? $cachedReferencedEntities->data : null;     
+        
+        //referenced entities list caching
+        if (!$refEnt) {
+         $refEnt = $ent->prop_def->referencedEntities();
+         $this->cache->set($referenced_cid, $refEnt, 300, ['referenced_entities:' . $mainId]);
         }
+        
+        //Iterate through list of referenced entities
+        if(count($refEnt) != 0) {
+
+          foreach($refEnt as $refEntItem) {
+            $id = $refEntItem->id();
+            
+            $artInfo["refer_ent_id" . $id] = $id;
+            $artInfo["refer_ent_title" . $id] = $refEntItem->title->value;
+            $artInfo["refer_ent_body" . $id] = $refEntItem->body->value;
+          }
+        }
+        
+        //custom entities caching
+        $this->cache->set($main_cid, $artInfo, 600, ['entity:' . $mainId;]);
+        
       }
       
       $articles[$ent->id()] = $artInfo;
     }
     
-    
     return $articles;
+    
   }
   
   

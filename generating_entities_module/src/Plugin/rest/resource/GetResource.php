@@ -8,6 +8,7 @@ use Drupal\rest\ResourceResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 
 use Drupal\generating_entities_module\Services\EntitiesService;
 
@@ -92,10 +93,21 @@ class GetResource extends ResourceBase {
       throw new AccessDeniedHttpException();
     }
     
+    $cache = CacheableMetadata::createFromRenderArray([
+      '#cache' => [
+        'max-age' => 300,
+        'contexts' => ['url.query_args'],
+      ],
+    ]);
+    
     $service = $this->entitiesService;
-    $articles = $service->getEntities("2018-09-10"); 
+    $articles = $service->getEntities("2018-08-07");    
     
     $response = $articles;
+    
+    $cache->addCacheableDependency($articles);
+    $response->addCacheableDependency($cache);
+    
     return new ResourceResponse($response);
     
   }
