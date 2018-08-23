@@ -89,7 +89,7 @@ class DateCustomWidgetTwo extends WidgetBase {
       '#type' => $this->getSetting('input_format'),
       '#title' => t('Start'),
       '#description' => t('Field for start date'),
-      '#default_value' => isset($items[$delta]->start_date) ? date('Y-m-d', $items[$delta]->start_date) : $this->getTodayDate(),
+      '#default_value' => isset($items[$delta]->start_date) ? date('Y-m-d', $items[$delta]->start_date) : date('Y-m-d'),
       '#required' => TRUE,
       '#ajax' => [
         'callback' => [$this, 'validateEndDate'],
@@ -105,7 +105,7 @@ class DateCustomWidgetTwo extends WidgetBase {
       '#type' => $this->getSetting('input_format'),
       '#title' => t('End'),
       '#description' => t('Field for end date'),
-      '#default_value' => isset($items[$delta]->end_date) ? date('Y-m-d', $items[$delta]->end_date) : $this->getTodayDate(),
+      '#default_value' => isset($items[$delta]->end_date) ? date('Y-m-d', $items[$delta]->end_date) : date('Y-m-d'),
       '#required' => TRUE,
       '#ajax' => [
         'callback' => [$this, 'validateEndDate'],
@@ -137,11 +137,6 @@ class DateCustomWidgetTwo extends WidgetBase {
     return $values;
   }
   
- 
-  private function getTodayDate() {
-    return date("Y-m-d");
-  }
-  
   private function getFormValues(FormStateInterface $form_state) {
     $currentVals = [];
     
@@ -163,37 +158,23 @@ class DateCustomWidgetTwo extends WidgetBase {
       return;
     }
     
-    if($this->validateDateLogic($startDate, $endDate) === false) {
+    if($this->validateDatesOrder($startDate, $endDate) === false) {
       $form_state->setError($element, t('End date should go after start date'));
     }
      
   }
   
   //ensures that end date goes after start date
-  private function validateDateLogic($start, $end) {
+  private function validateDatesOrder($start, $end) {
     $startDate = strtotime($start);
     $endDate = strtotime($end);
     
-    if($endDate >= $startDate) {
-      return true;
-    }
-    
-    return false;
+    return ($startDate <= $endDate);
   }
   
   //ensures that date input corresponds to date format(Y-m-d)
   private function validateDateFormat($start, $end) {
-    $regExp = "/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/";
-    
-    if(!(preg_match($regExp, $start))) {
-      return false;
-    }
-    
-    if(!(preg_match($regExp, $end))) {
-      return false;
-    }
-    
-    return true;
+    return (strtotime($start) && strtotime($end));
   }
 
   //AJAX validation for date format
@@ -207,6 +188,13 @@ class DateCustomWidgetTwo extends WidgetBase {
     }
     else {
       $response->addCommand(new HtmlCommand('.date-validation-msg', 'Date format is OK'));
+    }
+    
+    if($this->validateDatesOrder($currVals['start_date'], $currVals['end_date']) === false) {
+      $response->addCommand(new HtmlCommand('.date-validation-msg', 'End date should go after start date'));
+    }
+    else {
+      $response->addCommand(new HtmlCommand('.date-validation-msg', 'Dates order is OK'));
     }
     
     return $response;
